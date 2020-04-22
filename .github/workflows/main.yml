@@ -10,6 +10,8 @@ env:
 # events but only for the master branch
 on:
   repository_dispatch:
+  watch:
+    types: [started]
   pull_request:
     types: [closed]
     branches: [master]

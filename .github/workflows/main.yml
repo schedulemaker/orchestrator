@@ -1,0 +1,36 @@
+name: Deploy to AWS
+env: 
+  REGION: us-east-2
+  FUNCTION_NAME: orchestrator
+  PR_TITLE: ${{ github.event.pull_request.title }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  repository_dispatch:
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+jobs:
+  deploy:
+    if: github.event.pull_request.merged == true
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Zip Lambda function
+        run: cd index && zip function.zip *
+        
+      - name: Deploy to AWS
+        run: |
+          aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://index/function.zip --region $REGION   
+          aws lambda publish-version --function-name $FUNCTION_NAME --description "$PR_TITLE" --region $REGION

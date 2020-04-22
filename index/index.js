@@ -8,13 +8,17 @@ if (typeof(cache) === 'undefined'){
 module.exports.handler = async function(event, context){
     const schedules = await runScheduler(event);
     const [distances, commutes] = await Promise.all(runPaths(schedules), runTripPlanner(schedules));
-    return schedules.map((s, idx) => {
-        return {
-            sections: s,
-            commute: commutes[idx],
-            totalDistance: distances[idx]['totalDistance']
-        }
-    });
+    try {
+        return schedules.map((s, idx) => {
+            return {
+                sections: s,
+                commute: commutes[idx],
+                totalDistance: distances[idx]['totalDistance']
+            }
+        });
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 async function runScheduler(event){
@@ -34,8 +38,13 @@ async function runPaths(schedules){
             FunctionName: process.env.PATHS,
             Payload: JSON.stringify(s)
         }
-        const response = await cache.Lambda.invoke(params).promise();
-        return JSON.parse(response.Payload);
+        try {
+            const response = await cache.Lambda.invoke(params).promise();
+            return JSON.parse(response.Payload);
+        } catch (error) {
+            console.log(error);
+        }
+        
     }));
 }
 
@@ -44,7 +53,11 @@ async function runTripPlanner(schedules){
         FunctionName: process.env.TRIP,
         Payload: JSON.stringify(schedules)
     }
-    const response = await cache.Lambda.invoke(params).promise();
-    const data = JSON.parse(response.Payload);
-    return data.map(s => s.pop()['tripPlanner']);
+    try {
+        const response = await cache.Lambda.invoke(params).promise();
+        const data = JSON.parse(response.Payload);
+        return data.map(s => s.pop()['tripPlanner']);
+    } catch (error) {
+        console.log(error);
+    }
 }

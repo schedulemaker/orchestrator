@@ -7,7 +7,7 @@ if (typeof(cache) === 'undefined'){
 
 module.exports.handler = async function(event, context){
     const schedules = await runScheduler(event);
-    const [distances, commutes] = await Promise.all(runPaths(schedules), runTripPlanner(schedules));
+    const [distances, commutes] = await Promise.all([runPaths(schedules), runTripPlanner(schedules)]);
     try {
         return schedules.map((s, idx) => {
             return {
@@ -36,7 +36,10 @@ async function runPaths(schedules){
     return await Promise.all(schedules.map(async s => {
         const params = {
             FunctionName: process.env.PATHS,
-            Payload: JSON.stringify(s)
+            Payload: JSON.stringify({
+                schedule: s,
+                weeknum: 1
+            })
         }
         try {
             const response = await cache.Lambda.invoke(params).promise();
@@ -51,7 +54,9 @@ async function runPaths(schedules){
 async function runTripPlanner(schedules){
     const params = {
         FunctionName: process.env.TRIP,
-        Payload: JSON.stringify(schedules)
+        Payload: JSON.stringify({
+            schedule: schedules
+        })
     }
     try {
         const response = await cache.Lambda.invoke(params).promise();
